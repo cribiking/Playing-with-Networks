@@ -30,7 +30,7 @@ public class Communications {
             abans de llesgir el seguent, l'haurem d'enviar.
              */
             try {
-                in = new DataInputStream(socket.getInputStream());
+//                in = new DataInputStream(socket.getInputStream());
                 while (!message.equals("FI")){
                     message = br.readLine();
                     System.out.println("Communication Listener recive: "+message);
@@ -38,6 +38,13 @@ public class Communications {
 
             } catch (IOException e){
                 System.out.println("Error communications listener: "+e.getMessage());
+            } finally {
+                try {
+                    socket.close();
+                    br.close();
+                } catch (IOException e){
+                    System.out.println("Communications Closes: "+e.getMessage());
+                }
             }
         }
     }
@@ -58,6 +65,13 @@ public class Communications {
                 }
             } catch (IOException e){
                 System.out.println(e.getMessage());
+            } finally {
+                try {
+                    out.close();
+                    socket.close();
+                } catch (IOException e){
+                    System.out.println("Communications Closes: "+e.getMessage());
+                }
             }
         }
     }
