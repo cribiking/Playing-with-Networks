@@ -1,30 +1,30 @@
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.management.RuntimeMXBean;
 import java.net.Socket;
 
 public class Speaker implements Runnable {
     private DataOutputStream out;
-    private Socket socket;
-    public Speaker(DataOutputStream out, Socket socket) {
+
+    private BufferedReader br;
+
+    public Speaker(DataOutputStream out,  BufferedReader br) {
         this.out = out;
-        this.socket = socket;
+        this.br = br;
     }
     @Override
     public void run() {
         try {
-            while (){
-
+            String msg = "";
+            while (!msg.equals("FI")){
+                msg = br.readLine();
+                out.writeUTF(msg);
+                out.flush();
             }
         } catch (IOException e){
             System.out.println(e.getMessage());
-        } finally {
-            try {
-                out.close();
-                socket.close();
-            } catch (IOException e){
-                System.out.println("Communications Closes: "+e.getMessage());
-            }
         }
     }
 }
