@@ -1,7 +1,7 @@
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
-//pene
+//Arnau
 public class Client {
 
     final static int PORT = 6666;
