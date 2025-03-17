@@ -56,11 +56,12 @@ public class HandleConnexion extends Thread{
 
                 if(serverMsg.equals("FI")){
                     isConescted=false;
-                    //cal un brake??
+                    disconnect();
                 }
             }
         }catch (IOException e){
             System.out.println("Problema d'entrada de dades: "+e.getMessage());
+            disconnect();
         }
     }
 
@@ -74,12 +75,12 @@ public class HandleConnexion extends Thread{
 
                 if(msg.equals("FI")){
                     isConescted=false;
-
+                    disconnect();
                 }
             }
         } catch  (IOException e){
             System.out.println("Problemes amb la sortida de dades: "+e.getMessage());
-
+            disconnect();
         }
     }
 

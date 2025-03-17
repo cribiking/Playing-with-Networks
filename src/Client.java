@@ -13,6 +13,10 @@ public class Client {
             socket = new Socket(HOST, PORT);
             HandleConnexion handleConnexion = new HandleConnexion(socket);
 
+            handleConnexion.join();
+
+        } catch(InterruptedException e) {
+            System.out.println("Error amb els join: "+e.getMessage());
         } catch (UnknownHostException e) { //Servidor ocupat
              /*
          The client has attempted to connect to a server on a particular IP and port. The connection request has made it to the server machine,
