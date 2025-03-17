@@ -16,9 +16,9 @@ public class Server {
         System.out.println("Client connectat!");
         HandleConnexion handleConnexion = new HandleConnexion(socket);
 
-        handleConnexion.join();
+        handleConnexion.waitClientEnd();//Esperarem a que el fil principal del client acabi abans de tancar el servidor.
 
-    } catch (IOException | InterruptedException e){
+    } catch (IOException e){
         System.out.println("Error Server "+e.getMessage());
     } finally {
         try {

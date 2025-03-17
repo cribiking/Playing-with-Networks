@@ -8,7 +8,7 @@ public class HandleConnexion extends Thread{
     private DataOutputStream out;
     private BufferedReader br;
     //Variable de control de desconexió
-    private boolean isConescted;
+    private boolean isConnected;
 
     public HandleConnexion(Socket socket) {
         this.socket = socket;
@@ -20,7 +20,7 @@ public class HandleConnexion extends Thread{
             System.out.println("Inicialització variables entrada i sortida errònia: "+e.getMessage());
             throw new RuntimeException(e);
         }
-        isConescted=true;
+        isConnected =true;
         this.start();
     }
 
@@ -50,14 +50,18 @@ public class HandleConnexion extends Thread{
     void listen(){
         String serverMsg = "";
         try{
-            while(isConescted){
-                serverMsg = in.readUTF();
-                System.out.println("[Message]: "+serverMsg);
+            while(isConnected && !socket.isClosed()){//Evitar que listen() es quedi penjat per una desconnexió del socket
+                //métode readLine elimina els salts de linea.
+                //usant trim() comprovarem si l'String enviat ésta vuit comparant amb isEmpty()
+//                if (serverMsg.isEmpty()){//Si el missatge del servidor es diferent a un salt de línea el llegim
+                    serverMsg = in.readUTF();
+                    System.out.println("[Message]: "+serverMsg);
 
-                if(serverMsg.equals("FI")){
-                    isConescted=false;
-                    disconnect();
-                }
+                    if(serverMsg.equals("FI")){
+                        isConnected =false;
+                        disconnect();
+                    }
+//                }
             }
         }catch (IOException e){
             System.out.println("Problema d'entrada de dades: "+e.getMessage());
@@ -68,15 +72,18 @@ public class HandleConnexion extends Thread{
     void speak(){
         String msg="";
         try {
-            while (isConescted){
-                msg = br.readLine();
-                out.writeUTF(msg);
-                out.flush();
+            while (isConnected && !socket.isClosed()){
+//                if (msg.isEmpty()){//Si el missatge és diferent a un salt de línea vuit, llegim missatge del teclat
+                    msg = br.readLine();
+                    out.writeUTF(msg);
+                    out.flush();
 
-                if(msg.equals("FI")){
-                    isConescted=false;
-                    disconnect();
-                }
+                    if(msg.equals("FI")){
+                        isConnected =false;
+                        disconnect();
+                    }
+//                }
+
             }
         } catch  (IOException e){
             System.out.println("Problemes amb la sortida de dades: "+e.getMessage());
@@ -85,15 +92,25 @@ public class HandleConnexion extends Thread{
     }
 
     void disconnect(){
+        isConnected =false;
         try{
-            isConescted=false;
-            socket.close();
-            out.close();
-            in.close();
-            br.close();
+            //Prevenció d'errors per si algun element ja ha estat tancat anteriorment per algun problema
+            if (socket != null && !socket.isClosed()) socket.close();
+            if (out != null) out.close();
+            if (in != null) in.close();
+            if (br != null) br.close();
             System.out.println("Fins Aviat!!");
         } catch (IOException e){
             System.out.println("Error al tancar elements d'entrada/sortida");
+        }
+    }
+
+    //mèotde creat per assegurar-nos que el fil principal de HandleConnexión ha acabat abans de tancar les connexions.
+    void waitClientEnd(){
+        try {
+            this.join();
+        } catch (InterruptedException e){
+            System.out.println("Error esperant el final de la connexió: " + e.getMessage());
         }
     }
 }
