@@ -13,25 +13,10 @@ public class Server {
     try (ServerSocket server = new ServerSocket(PORT)) {
 
         socket = server.accept();
-        System.out.println("Connexió Acceptada");
-        DataInputStream in = new DataInputStream(socket.getInputStream());
-        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Client connectat!");
+        HandleConnexion handleConnexion = new HandleConnexion(socket);
 
-        out.writeUTF("Connexió Acceptada");
-
-        //Volem estar constantment escoltant al client
-        Thread clientListener = new Thread(new Listener(in, "Client"), "ClientListener");
-        System.out.println(clientListener);
-        clientListener.start();
-
-        //Volem enviar missatges del Servidor al client en qualsevol moment
-        Thread speakToClient = new Thread(new Speaker(out, br), "SpeakToClient");
-        System.out.println(speakToClient);
-        speakToClient.start();
-
-        clientListener.join();
-        speakToClient.join();
+        handleConnexion.join();
 
     } catch (IOException | InterruptedException e){
         System.out.println("Error Server "+e.getMessage());
