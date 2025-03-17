@@ -10,13 +10,11 @@ public class Client {
     public static void main(String[] args) {
         Socket socket = null;
         try {
+
             socket = new Socket(HOST, PORT);
             HandleConnexion handleConnexion = new HandleConnexion(socket);
+            handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
 
-            handleConnexion.join();
-
-        } catch(InterruptedException e) {
-            System.out.println("Error amb els join: "+e.getMessage());
         } catch (UnknownHostException e) { //Servidor ocupat
              /*
          The client has attempted to connect to a server on a particular IP and port. The connection request has made it to the server machine,

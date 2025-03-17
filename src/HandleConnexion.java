@@ -7,7 +7,10 @@ public class HandleConnexion extends Thread{
     private DataInputStream in;
     private DataOutputStream out;
     private BufferedReader br;
-    private boolean isConnected; //Variable control de desconnexió
+    private boolean isConnected; //Variable control de finalització de programes
+    private boolean processData; //Variable utilitzada per gestionar el temps d'ús de la cpu. Si un
+    private static final int SLEEP_TIME=50;// Per evitar esperes actives i forçar a anar canviant de fil
+    private final Object lock = new Object(); // Objecte de syncronització compartit
 
     public HandleConnexion(Socket socket) {
         this.socket = socket;
@@ -20,10 +23,15 @@ public class HandleConnexion extends Thread{
             throw new RuntimeException(e);
         }
         isConnected =true;
+        processData=true;
         this.start();
     }
 
-
+/*
+The Sender is supposed to send a data packet to the Receiver.
+The Receiver cannot process the data packet until the Sender finishes sending it.
+Similarly, the Sender shouldn’t attempt to send another packet unless the Receiver has already processed the previous packet.
+ */
     @Override
     public void run() {
 
@@ -43,49 +51,79 @@ public class HandleConnexion extends Thread{
         } finally {
             disconnect();
         }
-
     }
 
     void listen(){
-        String serverMsg = "";
+        String serverMsg;
         try{
-            while(isConnected && !socket.isClosed()){//Evitar que listen() es quedi penjat per una desconnexió del socket
-                //métode readLine elimina els salts de linea.
-                //usant trim() comprovarem si l'String enviat ésta vuit comparant amb isEmpty()
-//                if (serverMsg.isEmpty()){//Si el missatge del servidor es diferent a un salt de línea el llegim
-                    serverMsg = in.readUTF();
-                    System.out.println("[Message]: "+serverMsg);
+            //Si ningú ha finalitzat el xatín, cap socket ha sigut tancat, i em sigut notificats per escoltar:
+            while(isConnected && !socket.isClosed()){
 
-                    if(serverMsg.equals("FI")){
-                        isConnected =false;
+                synchronized (lock){
+                    while (processData){
+                        lock.wait();
+                    }
+                }
+
+                if (in.available() > 0){//Si hi ha bits per llegir
+                    serverMsg = in.readUTF();
+                    if (!serverMsg.isEmpty()){//Si el missatge es diferent a un salt de línea el mostrem
+                        System.out.println("[Message]: "+serverMsg);
+                    }
+                    if (serverMsg.equals("FI")) {
+                        isConnected = false;
                         disconnect();
                     }
+                }
+//                else {//Si no hi ha entrada de bits, pausem el thread fins que n'hi torni a haver
+//                    Thread.sleep(SLEEP_TIME);
 //                }
+
+                synchronized (lock){
+                    processData = true;//Avisem que les dades han sigut processades
+                    lock.notifyAll();//Avisem a speak que ja em finalitzat
+                }
             }
-        }catch (IOException e){
+        }catch (IOException | InterruptedException e){
             System.out.println("Problema d'entrada de dades: "+e.getMessage());
+            Thread.currentThread().interrupt();
+            System.err.println("Thread listen Interrupted");
             disconnect();
         }
     }
 
     void speak(){
-        String msg="";
+        String msg;
         try {
+            //Si ningú ha finalitzat el xatín, cap socket ha sigut tancat i la senyal de que ja s'ha rebut la informació és positiva:
             while (isConnected && !socket.isClosed()){
-//                if (msg.isEmpty()){//Si el missatge és diferent a un salt de línea vuit, llegim missatge del teclat
-                    msg = br.readLine();
+
+                synchronized (lock){
+                    while (!processData){
+                        lock.wait();
+                    }
+                }
+
+                msg = br.readLine().trim();//Ens asegurem d'eliminar espais en blanc davant i darrera
+                if (!msg.isEmpty()){//Si el missatge és diferent a un salt de línea, enviem el missatge.
                     out.writeUTF(msg);
                     out.flush();
+                }
+                if(msg.equals("FI")){
+                    isConnected =false;
+                    disconnect();
+                }
 
-                    if(msg.equals("FI")){
-                        isConnected =false;
-                        disconnect();
-                    }
-//                }
-
+                synchronized (lock){
+                    processData = false;//indiquem que el missatge ha sigut enviat
+                    lock.notifyAll();//notifiquem al thread listen de que ja pot començar a llegir dades
+                }
             }
-        } catch  (IOException e){
+
+        } catch  (IOException | InterruptedException e ){
             System.out.println("Problemes amb la sortida de dades: "+e.getMessage());
+            Thread.currentThread().interrupt();
+            System.err.println("Thread speak Interrupted");
             disconnect();
         }
     }
