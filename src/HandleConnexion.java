@@ -7,8 +7,7 @@ public class HandleConnexion extends Thread{
     private DataInputStream in;
     private DataOutputStream out;
     private BufferedReader br;
-    //Variable de control de desconexió
-    private boolean isConnected;
+    private boolean isConnected; //Variable control de desconnexió
 
     public HandleConnexion(Socket socket) {
         this.socket = socket;
