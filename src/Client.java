@@ -1,18 +1,28 @@
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
-//Arnau
+
 public class Client {
 
     final static int PORT = 6666;
     final static String HOST = "127.0.0.1";
+    private static Socket socket;
+
+    public Client(){
+        try {
+            this.socket = new Socket(HOST, PORT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static void main(String[] args) {
-        Socket socket = null;
+
         try {
 
-            socket = new Socket(HOST, PORT);
+            Client c1 = new Client();
             HandleConnexion handleConnexion = new HandleConnexion(socket);
+
             handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
 
         } catch (UnknownHostException e) { //Servidor ocupat
@@ -23,6 +33,12 @@ public class Client {
             System.out.println("Servidor ocupat o desconectat, aquesta aplicació es tancarà: " + e.getMessage());
         } catch (IOException e) {
             System.out.println("Error d'entrada sortida, es possible que el servidor estigui desconectat: " + e.getMessage());
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                System.out.println("Socket client error: "+e.getMessage());
+            }
         }
     }
 }

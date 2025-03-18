@@ -12,6 +12,8 @@ public class Server {
 
     try (ServerSocket server = new ServerSocket(PORT)) {
 
+        System.out.println("Servidor Iniciat, esperant connexions...");
+
         socket = server.accept();
         System.out.println("Client connectat!");
         HandleConnexion handleConnexion = new HandleConnexion(socket);
