@@ -1,12 +1,11 @@
-import sun.misc.Signal;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
 TODO: Controlar el CTRL-C
-TODO: Finalitzar els dos threads sense haver de fer enter (Volatile, AtomicInteger or Synchronize)
 TODO: Si un altre client es vol connectar i el servidor esta ocupat, avisar que el server esta ocupat
  */
 public class HandleConnexion extends Thread{
@@ -28,7 +27,7 @@ public class HandleConnexion extends Thread{
             System.out.println("Inicialització variables entrada i sortida errònia: "+e.getMessage());
         }
         isConnected = new AtomicBoolean(true);
-        controlC(); //Controlar ctrl-c des del principi
+        addShutdownHookThread();
         this.start();
     }
 
@@ -142,20 +141,21 @@ public class HandleConnexion extends Thread{
         }
     }
 
-    void controlC(){
-        Signal.handle(new Signal("INT"), sig -> {
-            System.err.println("Control-C executat");
-            addShutdownHookThread();
-            System.exit(130);
-        });
-    }
 
-    void addShutdownHookThread() {
+    void addShutdownHookThread()  {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            //possible fer una liked list de threads??
-            System.out.println("Executing Shutdown...");
-            Thread.interrupted();
-        }));
+            System.out.println("Connexió Tancada...");
+            isConnected.set(false);
+            Set<Thread> runningThreads = Thread.getAllStackTraces().keySet();
+            for (Thread th : runningThreads){
+                try {
+                    sleep(50);//Pausa per a donar temps als altres threads a finalitzar
+                    if (!th.getName().equals("main"))
+                        th.interrupt();
+                } catch (InterruptedException e) {
+                    System.out.println("El thread actual no es el propietari: "+e.getMessage());;
+                }
+            }
+        }, "Shutdown Thread"));
     }
-
 }

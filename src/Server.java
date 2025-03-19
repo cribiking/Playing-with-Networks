@@ -17,7 +17,9 @@ public class Server {
             System.out.println("Servidor Iniciat, esperant connexions...");
 
             socket = server.accept();
-            bussy.set(true);
+            Thread serverBusy = new Thread(()->{
+                //rellenar aqui usando solo las librerias del paquete java
+            });
 
             System.out.println("Client connectat!");
             HandleConnexion handleConnexion = new HandleConnexion(socket);
@@ -31,9 +33,9 @@ public class Server {
             try {
                 socket.close();
             } catch (IOException e) {
-                System.out.println("Communications Closes: " + e.getMessage());
+                System.err.println("Communications Closes: " + e.getMessage());
             } catch (NullPointerException e) {
-                System.out.println("Servidor en ús.. Intenta-ho més tard. 2");
+                System.err.println("Servidor en ús.. Intenta-ho més tard. 2");
             }
         }
     }
