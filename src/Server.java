@@ -1,40 +1,44 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
-public class Server {
+public class Server  {
 
-    final static int PORT  = 6666;
+    final static int PORT = 6666;
+
     public static void main(String[] args) {
 
-    Socket socket = null;
+        final AtomicBoolean socketAviable = new AtomicBoolean(true);
+        Socket socket = null;
 
-    try (ServerSocket server = new ServerSocket(PORT)) {
+        try (ServerSocket server = new ServerSocket(PORT)) {
 
-        System.out.println("Servidor Iniciat, esperant connexions...");
+            System.out.println("Servidor Iniciat, esperant connexions...");
 
-        socket = server.accept();
-        System.out.println("Client connectat!");
-        HandleConnexion handleConnexion = new HandleConnexion(socket);
+            socket = server.accept();
+            socketAviable.set(false);
 
-        handleConnexion.waitClientEnd();//Esperarem a que el fil principal del client acabi abans de tancar el servidor.
+            System.out.println("Client connectat!");
+            HandleConnexion handleConnexion = new HandleConnexion(socket);
 
-    } catch (IOException e){
-        System.out.println("Error Server "+e.getMessage());
-    } finally {
-        try {
-            socket.close();
-        } catch (IOException e){
-            System.out.println("Communications Closes: "+e.getMessage());
+            handleConnexion.waitClientEnd();//Esperarem a que el fil principal del client acabi abans de tancar el servidor.
+
+        } catch (IOException e) {
+            System.out.println("Error Server: " + e.getMessage());
+
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                System.out.println("Communications Closes: " + e.getMessage());
+            } catch (NullPointerException e) {
+                System.out.println("Servidor en ús.. Intenta-ho més tard. 2");
+            }
         }
     }
-         /*
-        The client has attempted to connect to a server on a particular IP and port. The connection request has made it to the server machine,
-        but there is no service listening for requests on the nominated port. The operating system then "refuses" the connection.
-         */
-        /*
-        recorda que IOExeption recull tant serverExeption com connectionExpetion. IOExpetion es el seu pare
-        */
-    }
 }
+
+
+
