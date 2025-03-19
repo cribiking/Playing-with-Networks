@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
 
@@ -10,14 +11,28 @@ public class Client {
 
 
     public static void main(String[] args) {
-        Socket socket;
+
+        Socket socket = null;
+        final AtomicBoolean serverIsBusy = new AtomicBoolean();
 
         try {
-
             socket = new Socket(HOST, PORT);
-            HandleConnexion handleConnexion = new HandleConnexion(socket);
+            DataInputStream in = new DataInputStream(socket.getInputStream());
 
-            handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
+            //Informació del servidor, si esta o no ocupat
+            serverIsBusy.set(in.readBoolean()); //Primer client sera fals
+
+            if (serverIsBusy.get()){
+                socket.close();
+                System.out.println("Servidor ocupat...");
+            } else {
+                serverIsBusy.set(true);
+                HandleConnexion handleConnexion = new HandleConnexion(socket);
+                handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
+
+            }
+
+
 //UnknownHostException
         } catch (ConnectException e) { //Servidor ocupat
              /*

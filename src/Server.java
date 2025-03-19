@@ -10,20 +10,37 @@ public class Server  {
 
     public static void main(String[] args) {
 
-        final AtomicBoolean socketAviable = new AtomicBoolean(true);
+        final AtomicBoolean bussy = new AtomicBoolean(false);
         Socket socket = null;
 
         try (ServerSocket server = new ServerSocket(PORT)) {
+            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+
+            //Informem al client que no hi ha ningu connectat
+            out.writeBoolean(bussy.get());
+            out.flush();
 
             System.out.println("Servidor Iniciat, esperant connexions...");
+            while (true) {
 
-            socket = server.accept();
-            socketAviable.set(false);
+                if(bussy.get()){ //si ja hi ha un client connectat
+                    out.writeUTF("Servidor Ocupado. Inténtelo más tarde.");
+                    socket.close();
 
-            System.out.println("Client connectat!");
-            HandleConnexion handleConnexion = new HandleConnexion(socket);
+                } else {
+                    //Acpetem la connexió amb nmés 1 client
+                    socket = server.accept();
+                    System.out.println("Client connectat!");
 
-            handleConnexion.waitClientEnd();//Esperarem a que el fil principal del client acabi abans de tancar el servidor.
+                    //Notifiquem que hi ha un client connectat
+                    bussy.set(true);
+                    out.writeBoolean(bussy.get());
+
+                    //Iniciem thread per controlar les connexions
+                    HandleConnexion handleConnexion = new HandleConnexion(socket);
+                    handleConnexion.waitClientEnd();//Esperarem a que el fil principal del client acabi abans de tancar el servidor.
+                }
+            }
 
         } catch (IOException e) {
             System.out.println("Error Server: " + e.getMessage());
