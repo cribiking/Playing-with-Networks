@@ -5,7 +5,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
 TODO: CTRL-C controlat, falta avisar al altre codi de que acabi.
-TODO: Si un altre client es vol connectar i el servidor esta ocupat, avisar que el server esta ocupat
 TODO: Superposició de missatges
  */
 public class HandleConnexion extends Thread{

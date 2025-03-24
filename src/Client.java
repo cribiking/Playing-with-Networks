@@ -1,8 +1,6 @@
 import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
@@ -20,7 +18,7 @@ public class Client {
 
             //Si server no esta ocupat enviarà false
             //Si server no esta ocupat enviarà true
-            if (!Server.busy.get()){
+            if (!in.readBoolean()){
                 HandleConnexion handleConnexion = new HandleConnexion(socket);
                 handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
             } else { //Server.busy.get() == true
