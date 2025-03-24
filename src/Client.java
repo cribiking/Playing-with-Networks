@@ -2,6 +2,8 @@ import java.io.*;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
 
@@ -10,15 +12,23 @@ public class Client {
 
 
     public static void main(String[] args) {
-        Socket socket;
 
         try {
+            //Connectem qualsevol client amb el server, depenent de si esta ocupat o no tanquem connexió
+            Socket socket = new Socket(HOST, PORT);
+            DataInputStream in = new DataInputStream(socket.getInputStream());
 
-            socket = new Socket(HOST, PORT);
-            HandleConnexion handleConnexion = new HandleConnexion(socket);
+            //Si server no esta ocupat enviarà false
+            //Si server no esta ocupat enviarà true
+            if (!Server.busy.get()){
+                HandleConnexion handleConnexion = new HandleConnexion(socket);
+                handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
+            } else { //Server.busy.get() == true
+                System.out.println("Server ocupat");
+                socket.close();
+            }
 
-            handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
-//UnknownHostException
+
         } catch (ConnectException e) { //Servidor ocupat
              /*
          The client has attempted to connect to a server on a particular IP and port. The connection request has made it to the server machine,

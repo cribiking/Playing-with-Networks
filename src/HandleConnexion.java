@@ -1,12 +1,12 @@
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
-TODO: Controlar el CTRL-C
+TODO: CTRL-C controlat, falta avisar al altre codi de que acabi.
 TODO: Si un altre client es vol connectar i el servidor esta ocupat, avisar que el server esta ocupat
+TODO: Superposició de missatges
  */
 public class HandleConnexion extends Thread{
 
@@ -14,7 +14,8 @@ public class HandleConnexion extends Thread{
     private DataInputStream in;
     private DataOutputStream out;
     private BufferedReader br;
-    private final AtomicBoolean isConnected;//Variable control de finalització de programes
+    private static volatile AtomicBoolean isConnected;//Variable control de finalització de programes
+    public static volatile AtomicBoolean notifyEnd;
     private static final int SLEEP_TIME=100;// Per evitar esperes actives i forçar a anar canviant de fil
 
     public HandleConnexion(Socket socket) {
@@ -27,6 +28,7 @@ public class HandleConnexion extends Thread{
             System.out.println("Inicialització variables entrada i sortida errònia: "+e.getMessage());
         }
         isConnected = new AtomicBoolean(true);
+        notifyEnd = new AtomicBoolean(false);
         addShutdownHookThread();
         this.start();
     }
@@ -46,6 +48,7 @@ public class HandleConnexion extends Thread{
             listenerThread.join();
             speakerThread.join();
 
+
         } catch (InterruptedException e){ //joins
             System.out.println("Problemes amb concurrencia dels threads: "+e.getMessage());
         }
@@ -63,7 +66,6 @@ public class HandleConnexion extends Thread{
                 if (in.available() > 0){//Si hi ha bits per llegir
                     entryMsg = in.readUTF();
 
-                    //Ficar condicio pq no prontegi FI
                     if (!entryMsg.isEmpty()){//Si el missatge es diferent a un salt de línea el mostrem
                         System.out.println("[Message]: " + entryMsg);
                     }
@@ -107,7 +109,7 @@ public class HandleConnexion extends Thread{
             }
         } catch  (IOException e ){
             System.out.println("Problemes amb la sortida de dades: "+e.getMessage());
-            Thread.currentThread().interrupt();
+            System.exit(0);
             System.err.println("Thread speak Interrupted");
         } catch (NullPointerException e){
             System.out.println("Null pointer exception: "+e.getMessage());
@@ -141,21 +143,17 @@ public class HandleConnexion extends Thread{
         }
     }
 
-
+/*
+El prolema per el qual no podem tancar el thread de l'altre extrem es perquè no podem enviar
+cap missatge de finalització per un socket ja tancat. Quan s'executa el Shutdown es perque el programa
+s'ha tancat.
+ */
     void addShutdownHookThread()  {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Connexió Tancada...");
+            System.out.println("\nConnexió Tancada...");
             isConnected.set(false);
-            Set<Thread> runningThreads = Thread.getAllStackTraces().keySet();
-            for (Thread th : runningThreads){
-                try {
-                    sleep(50);//Pausa per a donar temps als altres threads a finalitzar
-                    if (!th.getName().equals("main"))
-                        th.interrupt();
-                } catch (InterruptedException e) {
-                    System.out.println("El thread actual no es el propietari: "+e.getMessage());;
-                }
-            }
+            notifyEnd.set(true);
         }, "Shutdown Thread"));
     }
+
 }
