@@ -29,7 +29,7 @@ public class Server {
             //Iniciem funcionalitats d'entrada i sortida
             HandleConnexion handleConnexion = new HandleConnexion(socket);
 
-            //Iniciem thread que controlara connexions no desitjades
+            //Iniciem thread que controlar connexions no desitjades
             Thread clientHandle = new Thread(new handleNotAllowedClientConnexions(server , busy), "Deny Connexions");
 
             clientHandle.start();
@@ -45,7 +45,6 @@ public class Server {
         } catch (IOException e) {
             System.out.println("Problemes entrada Sortida: "+e.getMessage());
         }
-
 
     }
 

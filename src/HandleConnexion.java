@@ -1,9 +1,12 @@
 
 import java.io.*;
 import java.net.Socket;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
+TODO: Millorar sleep del thread handleNotAllowedConnexions
 TODO: CTRL-C controlat, falta avisar al altre codi de que acabi.
 TODO: Superposició de missatges
  */
@@ -53,6 +56,7 @@ public class HandleConnexion extends Thread{
         }
         finally {
             disconnect();
+            closeInstanceOfHandleConnexion();
         }
     }
 
@@ -153,6 +157,17 @@ s'ha tancat.
             isConnected.set(false);
             notifyEnd.set(true);
         }, "Shutdown Thread"));
+    }
+
+    void closeInstanceOfHandleConnexion() {
+        Set<Thread> instance = Thread.getAllStackTraces().keySet();
+        for (Thread th : instance){
+            if (th instanceof HandleConnexion && th != Thread.currentThread()) {
+                System.out.println("Cerrando instancia anterior de HandleConnexion: " + th.getName());
+                th.interrupt(); // Interrumpe el hilo
+            }
+
+        }
     }
 
 }
