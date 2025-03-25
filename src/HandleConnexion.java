@@ -1,7 +1,6 @@
 
 import java.io.*;
 import java.net.Socket;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -12,6 +11,7 @@ TODO: Superposició de missatges
  */
 public class HandleConnexion extends Thread{
 
+    private final String receptor;
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
@@ -20,7 +20,8 @@ public class HandleConnexion extends Thread{
     public static volatile AtomicBoolean notifyEnd;
     private static final int SLEEP_TIME=100;// Per evitar esperes actives i forçar a anar canviant de fil
 
-    public HandleConnexion(Socket socket) {
+    public HandleConnexion(Socket socket, String receptor) {
+        this.receptor = receptor;
         try {
             this.socket = socket;
             this.out = new DataOutputStream(socket.getOutputStream());
@@ -70,7 +71,7 @@ public class HandleConnexion extends Thread{
                     entryMsg = in.readUTF();
 
                     if (!entryMsg.isEmpty()){//Si el missatge es diferent a un salt de línea el mostrem
-                        System.out.println("[Message]: " + entryMsg);
+                        System.out.println("["+ receptor +"]: " + entryMsg);
                     }
                     if (entryMsg.equals("FI")) {
                         isConnected.set(false);
@@ -92,7 +93,7 @@ public class HandleConnexion extends Thread{
         try {
 
             //Si ningú ha finalitzat el xatín, cap socket ha sigut tancat i la senyal de que ja s'ha rebut la informació és positiva:
-            while (isConnected.get() && !socket.isClosed()) {
+            while (isConnected.get()) {
                 //Desde listen, notificarem de que em rebut 'FI' canviant la variable a false, i així br.readLine no bloqueja el thread
 
                 if (br.ready()) { //Per evitar que br.readline() bloquegi el thread, primer revisem si hi ha dades per llegir

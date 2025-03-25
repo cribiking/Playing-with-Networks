@@ -7,7 +7,8 @@ public class Server {
     static final int PORT = 6666;
     static ServerSocket server;
     static Socket socket;
-    public static volatile AtomicBoolean busy = new AtomicBoolean(false); //Indiquem que el servidor no esta ocupat
+    public static AtomicBoolean busy = new AtomicBoolean(false); //Indiquem que el servidor no esta ocupat
+    public static AtomicBoolean connected = new AtomicBoolean(true);
 
     public static void main(String[] args) {
 
@@ -18,32 +19,23 @@ public class Server {
 
             //Acceptem un client
             socket = server.accept();
-            System.out.println("Client connectat!");
 
-            //Creem canal per informar de l'estat del server
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            out.writeBoolean(busy.get());
+            //Un cop acceptem un client tanquem l'espera de connexions
+            server.close();
+
+            System.out.println("Client connectat!");
 
             busy.set(true); //Per tant server ocupat
 
             //Iniciem funcionalitats d'entrada i sortida
-            HandleConnexion handleConnexion = new HandleConnexion(socket);
+            HandleConnexion handleConnexion = new HandleConnexion(socket, "Client");
+            handleConnexion.waitClientEnd();
 
-            //Iniciem thread que controlar connexions no desitjades
-            Thread clientHandle = new Thread(new handleNotAllowedClientConnexions(server , busy), "Deny Connexions");
-
-            clientHandle.start();
-            handleConnexion.speak();
-
-            clientHandle.join();
-            handleConnexion.join();
-
-            busy.set(false); //Alliberem al servidor
-
-        } catch (InterruptedException e) {
-            System.out.println("Server error");
         } catch (IOException e) {
             System.out.println("Problemes entrada Sortida: "+e.getMessage());
+        } finally {
+            busy.set(false); //Alliberem al servidor
+            connected.set(false);
         }
 
     }

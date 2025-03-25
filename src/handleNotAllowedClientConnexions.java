@@ -21,7 +21,7 @@ public class handleNotAllowedClientConnexions implements Runnable {
     public void run() {
 
         try {
-            while (busy.get()) { //Si busy == true , vol dir que hi ha un client connectat i per tant cancelarem altres connexions
+            while (Server.busy.get() && Server.connected.get()) { //Si busy == true , vol dir que hi ha un client connectat i per tant cancelarem altres connexions
                 Socket extraClient = server.accept();
                 if (extraClient.isConnected()) {
                     DataOutputStream out = new DataOutputStream(extraClient.getOutputStream());
@@ -30,8 +30,9 @@ public class handleNotAllowedClientConnexions implements Runnable {
 
                     extraClient.close();
                 } else {
-                    Thread.sleep(50);
+                    Thread.sleep(100);
                 }
+                System.out.println("Estic bloquejat");
             }
 
         } catch (IOException e) {
