@@ -5,22 +5,24 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /*
-TODO: Millorar sleep del thread handleNotAllowedConnexions
-TODO: CTRL-C controlat, falta avisar al altre codi de que acabi.
+
+TODO:
 TODO: Superposició de missatges
  */
 public class HandleConnexion extends Thread{
 
     private final String receptor;
+    private final boolean isServer;
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
     private BufferedReader br;
-    private static volatile AtomicBoolean isConnected;//Variable control de finalització de programes
-    public static volatile AtomicBoolean notifyEnd;
-    private static final int SLEEP_TIME=100;// Per evitar esperes actives i forçar a anar canviant de fil
+    private static AtomicBoolean isConnected;//Variable control de finalització de programes
+    private static final int SLEEP_TIME=250;// Per evitar esperes actives i forçar a anar canviant de fil
 
-    public HandleConnexion(Socket socket, String receptor) {
+    //Constructor de la classe HandleConnexion
+    public HandleConnexion(Socket socket, String receptor, boolean isServer) {
+        this.isServer = isServer;
         this.receptor = receptor;
         try {
             this.socket = socket;
@@ -31,7 +33,6 @@ public class HandleConnexion extends Thread{
             System.out.println("Inicialització variables entrada i sortida errònia: "+e.getMessage());
         }
         isConnected = new AtomicBoolean(true);
-        notifyEnd = new AtomicBoolean(false);
         addShutdownHookThread();
         this.start();
     }
@@ -39,136 +40,116 @@ public class HandleConnexion extends Thread{
     @Override
     public void run() {
 
-        try {
-            System.out.println("Connexió Acceptada");
+        connexionConfirmation();
 
-            Thread listenerThread = new Thread(this::listen, "Listener Thread");
-            Thread speakerThread = new Thread(this::speak , "Speaker Thread");
+        //Iniciem els threads d'escolta i parla
+        Thread listenerThread = new Thread(this::listen, "Listener Thread");
+        Thread speakerThread = new Thread(this::speak, "Speaker Thread");
 
-            listenerThread.start();
-            speakerThread.start();
-
-            listenerThread.join();
-            speakerThread.join();
-
-
-        } catch (InterruptedException e){ //joins
-            System.out.println("Problemes amb concurrencia dels threads: "+e.getMessage());
-        }
-        finally {
-            disconnect();
-            closeInstanceOfHandleConnexion();
-        }
+        listenerThread.start();
+        speakerThread.start();
     }
 
-    void listen(){
+    private void listen(){
         String entryMsg;
         try{
-            //Si ningú ha finalitzat el xatín, cap socket ha sigut tancat, i em sigut notificats per escoltar:
+            //Si ningú ha finalitzat i cap socket ha sigut tancat
             while(isConnected.get() && !socket.isClosed()){
 
-                if (in.available() > 0){//Si hi ha bits per llegir
-                    entryMsg = in.readUTF();
+                entryMsg = in.readUTF();
 
-                    if (!entryMsg.isEmpty()){//Si el missatge es diferent a un salt de línea el mostrem
-                        System.out.println("["+ receptor +"]: " + entryMsg);
-                    }
-                    if (entryMsg.equals("FI")) {
-                        isConnected.set(false);
-                    }
+                if (!entryMsg.isEmpty()) {//Si el missatge es diferent a un salt de línea el mostrem
+                    System.out.println("[" + receptor + "]: " + entryMsg);
                 }
-                else {//Si no hi ha entrada de bits, pausem el thread fins que n'hi torni a haver
-                    Thread.sleep(SLEEP_TIME);
+                if (entryMsg.equals("FI")) {
+                    isConnected.set(false);
                 }
+
+                Thread.sleep(SLEEP_TIME);
             }
         }catch (IOException | InterruptedException e){
-            System.out.println("Problema d'entrada de dades: "+e.getMessage());
-            Thread.currentThread().interrupt();
-            System.err.println("Thread listen Interrupted");
+            System.out.println("S'ha finalitzat la connexió ");
+            //Asegurem tancar les connexions
+            disconnect();
+            System.exit(0);
         }
     }
 
-    void speak(){
-        String msg;
-        try {
+    private void speak(){
+        String msg = "";
 
-            //Si ningú ha finalitzat el xatín, cap socket ha sigut tancat i la senyal de que ja s'ha rebut la informació és positiva:
-            while (isConnected.get()) {
+        try {
+            //Si ningú ha finalitzat i cap socket ha sigut tancat
+            while (isConnected.get() && !socket.isClosed()) {
                 //Desde listen, notificarem de que em rebut 'FI' canviant la variable a false, i així br.readLine no bloqueja el thread
 
                 if (br.ready()) { //Per evitar que br.readline() bloquegi el thread, primer revisem si hi ha dades per llegir
                     msg = br.readLine().trim();//Ens asegurem d'eliminar espais en blanc davant i darrera
-
-                    if (!msg.isEmpty()) {//Si el missatge és diferent a un salt de línea, enviem el missatge.
-                        out.writeUTF(msg);
-                        out.flush();
-                    }
-
-                    if (msg.equals("FI")) {
-                        isConnected.set(false);
-                    }
-                } else {
-                    Thread.sleep(SLEEP_TIME);
                 }
+
+                out.writeUTF(msg);
+                out.flush();
+
+                if (msg.equals("FI")) {
+                    isConnected.set(false);
+                }
+
+                msg = "";
+                Thread.sleep(SLEEP_TIME);
             }
-        } catch  (IOException e ){
-            System.out.println("Problemes amb la sortida de dades: "+e.getMessage());
+
+        } catch  (IOException | InterruptedException e){
+            //Asegurem tancar les connexions
+            disconnect();
             System.exit(0);
-            System.err.println("Thread speak Interrupted");
         } catch (NullPointerException e){
             System.out.println("Null pointer exception: "+e.getMessage());
-        } catch (InterruptedException e) {
-            System.err.println("Thread speak Interrupted");
         }
-
     }
 
-    void disconnect(){
-        isConnected.set(false);
+    //Mètode per confirmar les connexions del servidor amb client
+    private void connexionConfirmation(){
+        try {
+            if (isServer) {
+                System.out.println("Connexió Acceptada");
+                out.writeUTF("Connexió Acceptada");
+                out.flush();
+            } else {
+                System.out.println(in.readUTF());
+            }
+        } catch (IOException e) {
+            System.out.println("Problemes al comunicar-se");
+        }
+    }
+
+    //Mètode per asegurar que tanquem totes les connexions
+    private void disconnect(){
         try {
             //Prevenció d'errors per si algun element ja ha estat tancat anteriorment per algun problema
             if (socket != null && !socket.isClosed()) socket.close();
             if (out != null) out.close();
             if (in != null) in.close();
             if (br != null) br.close();
-            System.out.println("Fins Aviat!!");
         } catch (IOException e) {
             System.out.println("Error al tancar elements d'entrada/sortida");
         }
     }
 
-    //mèotde creat per assegurar-nos que el fil principal de HandleConnexión ha acabat abans de tancar les connexions.
-    //Creada per codi més net
-    void waitClientEnd(){
-        try {
-            this.join();
-        } catch (InterruptedException e){
-            System.out.println("Error esperant el final de la connexió: " + e.getMessage());
-        }
-    }
-
-/*
-El prolema per el qual no podem tancar el thread de l'altre extrem es perquè no podem enviar
-cap missatge de finalització per un socket ja tancat. Quan s'executa el Shutdown es perque el programa
-s'ha tancat.
- */
-    void addShutdownHookThread()  {
+    //Per a controlar finalitzacions, he afeigit un nou thread personalitzat al JVM shutdowns.
+    private void addShutdownHookThread()  {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("\nConnexió Tancada...");
-            isConnected.set(false);
-            notifyEnd.set(true);
-        }, "Shutdown Thread"));
-    }
+            System.out.println("\n[Avís]: Finalitzant connexió, tancant programa....");
 
-    void closeInstanceOfHandleConnexion() {
-        Set<Thread> instance = Thread.getAllStackTraces().keySet();
-        for (Thread th : instance){
-            if (th instanceof HandleConnexion && th != Thread.currentThread()) {
-                System.out.println("Cerrando instancia anterior de HandleConnexion: " + th.getName());
-                th.interrupt(); // Interrumpe el hilo
+            try {
+                //Simulem processos de tancament
+                Thread.sleep(800);
+            } catch (InterruptedException e) {
+                System.out.println("Error dormint");
             }
 
-        }
+            System.out.println("\n----Connexió Tancada----");
+            isConnected.set(false);
+        }, "Shutdown Thread"));
     }
 
 }

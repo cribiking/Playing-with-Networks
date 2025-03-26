@@ -7,39 +7,29 @@ public class Server {
     static final int PORT = 6666;
     static ServerSocket server;
     static Socket socket;
-    public static AtomicBoolean busy = new AtomicBoolean(false); //Indiquem que el servidor no esta ocupat
-    public static AtomicBoolean connected = new AtomicBoolean(true);
 
     public static void main(String[] args) {
 
         try {
-            //Iniciem server
+            //Iniciem servidor
             server = new ServerSocket(PORT);
             System.out.println("Servidor Iniciat, esperant connexions...");
 
             //Acceptem un client
             socket = server.accept();
+            System.out.println("Client connectat!");
 
             //Un cop acceptem un client tanquem l'espera de connexions
             server.close();
 
-            System.out.println("Client connectat!");
-
-            busy.set(true); //Per tant server ocupat
-
             //Iniciem funcionalitats d'entrada i sortida
-            HandleConnexion handleConnexion = new HandleConnexion(socket, "Client");
-            handleConnexion.waitClientEnd();
+            HandleConnexion handleConnexion = new HandleConnexion(socket, "Client", true);
 
         } catch (IOException e) {
-            System.out.println("Problemes entrada Sortida: "+e.getMessage());
-        } finally {
-            busy.set(false); //Alliberem al servidor
-            connected.set(false);
+            System.out.println("Servidor ja ha sigut iniciat");
         }
 
     }
-
 
 }
 

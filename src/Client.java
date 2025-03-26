@@ -12,18 +12,12 @@ public class Client {
     public static void main(String[] args) {
 
         try {
-            //Connectem qualsevol client amb el server, depenent de si esta ocupat o no tanquem connexió
             Socket socket = new Socket(HOST, PORT);
 
-            HandleConnexion handleConnexion = new HandleConnexion(socket , "Server");
-            handleConnexion.waitClientEnd(); //No acabem fins que el servidor acabi
+            //Iniciem funcionalitats d'entrada i sortida
+            HandleConnexion handleConnexion = new HandleConnexion(socket , "Server", false);
 
-
-        } catch (ConnectException e) { //Servidor ocupat
-             /*
-         The client has attempted to connect to a server on a particular IP and port. The connection request has made it to the server machine,
-         but there is no service listening for requests on the nominated port. The operating system then "refuses" the connection.
-          */
+        } catch (ConnectException e) {
             System.err.println("Servidor ocupat o desconnectat, aquesta aplicació es tancarà...");
         } catch (IOException e) {
             System.err.println("Error d'entrada sortida, es possible que el servidor estigui desconnectat");
